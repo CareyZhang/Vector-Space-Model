@@ -11,10 +11,12 @@ def get_idf(doc_dataset,target,doc_cnt):
 query_list = [query.strip('\n') for query in open("query_list.txt","r")]
 doc_list = [doc.strip('\n') for doc in open("doc_list.txt","r")]
 
+dictionary = {}
 query_dataset = {}
 query_dataset_tf = {}
 doc_dataset = {}
 doc_dataset_tf = {}
+cnt = 0
 
 for query in query_list:
 	query_dataset.update({query:{}})
@@ -28,6 +30,10 @@ for query in query_list:
 			else:
 				query_dataset[query].update({word:1})
 			word_cnt += 1
+			cnt += 1
+			
+			if word not in dictionary:
+				dictionary.update({word:cnt})
 			
 	for word in query_dataset[query]:
 		query_dataset_tf[query].update({word:query_dataset[query][word]/word_cnt})
@@ -46,6 +52,10 @@ for doc in doc_list:
 				doc_dataset[doc].update({word:1})
 			word_cnt += 1
 			
+			
+			if word not in dictionary:
+				dictionary.update({word:cnt})
+			
 	for word in doc_dataset[doc]:
 		doc_dataset_tf[doc].update({word:doc_dataset[doc][word]/word_cnt})
 
@@ -59,6 +69,14 @@ for queries in query_list:
 			if a != 0:
 				idf.update({words:a})
 
+for word in dictionary.keys():
+	for doc in doc_list:
+		if word not in doc_dataset_tf[doc]:
+			doc_dataset_tf[doc].update({word:0})
+			
+	for query in query_list:
+		if query not in query_dataset_tf[query]:
+			query_dataset_tf[query].update({word:0})
 f = open("submission.txt", "w")
 f.write("Query,RetrievedDocuments\r\n")
 
@@ -67,16 +85,20 @@ for queries in query_list:
 	query_weight = {}
 	doc_weight = {}
 	sim = {}
-	for words in query_dataset[queries].keys():
+	for words in dictionary.keys():
 		if words in idf:
-			query_weight.update({words:(1 + query_dataset_tf[queries][words]) * math.log(doc_cnt/(1 + idf[words]),10)})
+			query_weight.update({words:query_dataset_tf[queries][words] * math.log(doc_cnt/idf[words],10)})
+		else:
+			query_weight.update({words:0})
 
 	for docs in doc_list:
 		doc_weight.update({docs:{}})
-		for words in doc_dataset[docs]:
+		for words in dictionary.keys():
 			if words in idf:
-				doc_weight[docs].update({words:(1 + doc_dataset_tf[docs][words]) * math.log(doc_cnt/(1 + idf[words]),10)})
-
+				doc_weight[docs].update({words:doc_dataset_tf[docs][words] * math.log(doc_cnt/idf[words],10)})
+			else:
+				doc_weight[docs].update({words:0})
+				
 	for docs in doc_list:
 		s1 = 0
 		s2 = 0
